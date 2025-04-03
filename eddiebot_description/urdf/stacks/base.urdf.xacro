@@ -1,0 +1,300 @@
+<?xml version="1.0"?>
+<robot name="eddiebot_base" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find eddiebot_description)/urdf/common.urdf.xacro"/>
+  <!-- <xacro:include filename="$(find eddiebot_description)/urdf/sensors/ultrasonic_sensor.urdf.xacro"/>
+  <xacro:include filename="$(find eddiebot_description)/urdf/sensors/ir_sensor.urdf.xacro"/> -->
+
+  <!-- Define robot constants -->
+  <xacro:property name="base_length" value="0.0095"/>
+  <xacro:property name="base_radius" value="0.2245"/>
+  <xacro:property name="base_mass" value="2"/>
+  <xacro:property name="base_link_z_offset" value="0.10125"/>
+
+  <xacro:property name="battery_box_z_offset" value="-0.04285"/>
+  <xacro:property name="battery_box_width" value="0.3366"/>
+
+  <xacro:property name="caster_mass" value="0.5"/>
+  <xacro:property name="caster_radius" value="0.05"/>
+  <xacro:property name="caster_length" value="0.061"/>
+  <xacro:property name="caster_x_offset" value="0.18745"/>
+  <xacro:property name="caster_z_offset" value="-0.00475"/>
+
+  <xacro:property name="axle_radius" value="0.00635"/>
+  <xacro:property name="axle_length" value="0.00635"/>
+  <xacro:property name="axle_y_offset" value="0.171475"/>
+  <xacro:property name="axle_z_offset" value="0.014"/>
+
+  <xacro:property name="wheel_mass" value="0.8"/>
+  <xacro:property name="wheel_radius" value="0.0762"/>
+  <xacro:property name="wheel_width" value="0.03175"/>
+  <xacro:property name="wheel_y_offset" value="0.01905"/>
+
+  <xacro:macro name="base">
+
+    <!-- base_footprint is a fictitious link(frame) that is on the ground right below base_link origin, navigation stack depends on this frame -->
+    <link name="base_footprint">
+    </link>
+    <joint name="base_footprint_joint" type="fixed">
+      <origin xyz="0 0 ${base_link_z_offset}" rpy="0 0 0" />        
+      <parent link="base_footprint"/>
+      <child link="base_link" />
+    </joint>
+
+    <link name="base_link">
+      <xacro:inertial_cylinder mass="${base_mass}" length="${base_length}" radius="${base_radius}"/>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="${base_length}" radius="${base_radius}"/>
+        </geometry>
+        <material name ="material_darkgray" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <cylinder length="${base_length}" radius="${base_radius}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="battery_box">
+      <xacro:inertial_cuboid mass="1" x="0.1778" y="${battery_box_width}" z="0.0762"/>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.1778 ${battery_box_width} 0.0762" />
+        </geometry>
+        <material name ="material_darkgray" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="0.1778 ${battery_box_width} 0.0762" />
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="battery_box_joint" type="fixed">
+      <origin xyz="0 0 ${battery_box_z_offset}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="battery_box" />
+    </joint>
+
+    <link name="front_caster">
+      <xacro:inertial_cylinder mass="${caster_mass}" length="${caster_length}" radius="${caster_radius}" />
+      <visual>
+        <origin xyz="0 0 0" rpy="-${M_PI/2} 0 ${M_PI/2}" />
+        <geometry>
+          <mesh filename="package://eddiebot_description/meshes/28971-Caster-Wheel-Kit-v1.0.stl"/>
+        </geometry>
+        <material name ="material_lightgray">
+          <color rgba="0.6 0.6 0.6 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="${caster_length}" radius="${caster_radius}"/>
+        </geometry>
+        <origin rpy="${M_PI/2} 0 0" xyz="0 0 -${caster_radius}"/>
+      </collision>
+    </link>
+    <gazebo reference="front_caster">
+      <mu1 value="0.0"/>
+      <mu2 value="0.0"/>
+      <kp value="10000000.0"/>
+      <kd value="1.0"/>
+      <fdir1 value="1 0 0"/>
+      <turnGravityOff>false</turnGravityOff>
+    </gazebo>
+
+    <joint name="front_caster_joint" type="fixed">
+      <origin xyz="${caster_x_offset} 0 ${caster_z_offset}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="front_caster" />
+    </joint>
+
+    <link name="rear_caster">
+      <xacro:inertial_cylinder mass="${caster_mass}" length="${caster_length}" radius="${caster_radius}" />
+      <visual>
+        <origin xyz="0 0 0" rpy="-${M_PI/2} 0 ${M_PI/2}" />
+        <geometry>
+          <mesh filename="package://eddiebot_description/meshes/28971-Caster-Wheel-Kit-v1.0.stl"/>
+        </geometry>
+        <material name ="material_lightgray">
+          <color rgba="0.6 0.6 0.6 1"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${caster_radius}"/>
+        </geometry>
+        <origin rpy="${M_PI/2} 0 0" xyz="0 0 -${caster_radius}"/>
+      </collision>
+    </link>
+    <gazebo reference="rear_caster">
+      <mu1 value="0.0"/>
+      <mu2 value="0.0"/>
+      <kp value="10000000.0"/>
+      <kd value="1.0"/>
+      <fdir1 value="1 0 0"/>
+      <turnGravityOff>false</turnGravityOff>
+    </gazebo>
+
+    <joint name="rear_caster_joint" type="fixed">
+      <origin xyz="${-caster_x_offset} 0 ${caster_z_offset}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="rear_caster" />
+    </joint>
+
+    <link name="left_axle_link">
+      <xacro:inertial_dummy />
+      <visual>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} ${M_PI/2}" />
+        <geometry>
+          <cylinder radius="${axle_radius}" length = "${axle_length}"/>
+        </geometry>
+        <material name ="material_lightgray" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} ${M_PI/2}" />
+        <geometry>
+          <cylinder radius="${axle_radius}" length = "${axle_length}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="left_axle_joint" type="fixed">
+      <origin xyz="0 ${axle_y_offset} ${axle_z_offset}" rpy="0 0 0"/>
+      <parent link="battery_box"/>
+      <child link="left_axle_link"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="right_axle_link">
+      <xacro:inertial_dummy />
+      <visual>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} ${M_PI/2}" />
+        <geometry>
+          <cylinder radius="${axle_radius}" length = "${axle_length}"/>
+        </geometry>
+        <material name ="material_lightgray" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 ${M_PI/2} ${M_PI/2}" />
+        <geometry>
+          <cylinder radius="${axle_radius}" length = "${axle_length}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="right_axle_joint" type="fixed">
+      <origin xyz="0 ${-axle_y_offset} ${axle_z_offset}" rpy="0 0 0"/>
+      <parent link="battery_box"/>
+      <child link="right_axle_link"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="left_wheel_link">
+      <xacro:inertial_cylinder mass="${wheel_mass}" radius="${wheel_radius}" length="${wheel_width}" />
+      <visual>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length = "${wheel_width}"/>
+        </geometry>
+        <material name ="material_black" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length = "${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="left_wheel_joint" type="continuous">
+      <origin xyz="0 ${wheel_y_offset} 0" rpy="0 0 0"/>
+      <parent link="left_axle_link"/>
+      <child link="left_wheel_link"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <link name="right_wheel_link">
+      <xacro:inertial_cylinder mass="${wheel_mass}" radius="${wheel_radius}" length="${wheel_width}" />
+      <visual>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length = "${wheel_width}"/>
+        </geometry>
+        <material name ="material_black" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="${M_PI/2} 0 0" />
+        <geometry>
+          <cylinder radius="${wheel_radius}" length = "${wheel_width}"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <joint name="right_wheel_joint" type="continuous">
+      <origin xyz="0 -${wheel_y_offset} 0" rpy="0 0 0"/>
+      <parent link="right_axle_link"/>
+      <child link="right_wheel_link"/>
+      <axis xyz="0 1 0"/>
+    </joint>
+
+    <ros2_control name="GazeboSimSystem" type="system">
+      <hardware>
+        <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+      </hardware>
+      <joint name="left_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+      <joint name="right_wheel_joint">
+        <command_interface name="velocity"/>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+      </joint>
+    </ros2_control>
+
+    <gazebo>
+      <!-- Joint state publisher -->
+      <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+          <parameters>$(find eddiebot_description)/config/diff_drive_controller.yaml</parameters>
+      </plugin>
+    </gazebo>
+
+    <!-- Diff Drive -->
+    <!-- <gazebo>
+      <plugin filename="gz-sim-diff-drive-system" name="gz::sim::systems::DiffDrive">
+        <left_joint>left_wheel_joint</left_joint>
+        <right_joint>right_wheel_joint</right_joint>
+        <wheel_separation>${wheel_y_offset*2 + battery_box_width}</wheel_separation>
+        <wheel_radius>${wheel_radius}</wheel_radius>
+        <odom_publish_frequency>1</odom_publish_frequency>
+        <topic>cmd_vel</topic>
+        <frame_id>odom</frame_id>
+        <child_frame_id>base_footprint</child_frame_id>
+        <odom_topic>wheel_odom</odom_topic>
+      </plugin>
+      <plugin filename="gz-sim-joint-state-publisher-system" name="gz::sim::systems::JointStatePublisher">
+        <joint_name>left_wheel_joint</joint_name>
+        <joint_name>right_wheel_joint</joint_name>
+        <topic>model/eddiebot/joint_states</topic>
+      </plugin>
+    </gazebo> -->
+
+
+    <!-- create two instances of the ultrasonic sensor -->
+    <!-- <xacro:ultrasonic_sensor topic_name="ultrasonic1" sensor_name="usen1" link_name="ul1" joint_name='uj1' parent="base_link" x="0.195" y="0.09" z="0.015" roll="0" pitch="0" yaw="${M_PI/8}"/>
+    <xacro:ultrasonic_sensor topic_name="ultrasonic2" sensor_name="usen2" link_name="ul2" joint_name='uj2' parent="base_link" x="0.195" y="-0.09" z="0.015" roll="0" pitch="0" yaw="${-M_PI/8}"/> -->
+    
+    <!-- create three instances of the infrared sensor -->
+    <!-- <xacro:infrared_sensor topic_name="infrared1" sensor_name="isen1" link_name="il1" joint_name='ij1' parent="base_link" x="0.135" y="-0.155" z="0.025" roll="0" pitch="0" yaw="${-M_PI/4}"/>
+    <xacro:infrared_sensor topic_name="infrared2" sensor_name="isen2" link_name="il2" joint_name='ij2' parent="base_link" x="0.210" y="0.00" z="0.025" roll="0" pitch="0" yaw="0"/>
+    <xacro:infrared_sensor topic_name="infrared3" sensor_name="isen3" link_name="il3" joint_name='ij3' parent="base_link" x="0.135" y="0.155" z="0.025" roll="0" pitch="0" yaw="${M_PI/4}"/> -->
+
+  </xacro:macro>
+
+</robot>

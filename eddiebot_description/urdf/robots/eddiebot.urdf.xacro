@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="eddiebot" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find eddiebot_description)/urdf/stacks/base.urdf.xacro"/>
+  <xacro:include filename="$(find eddiebot_description)/urdf/stacks/layer1.urdf.xacro"/>
+  <xacro:include filename="$(find eddiebot_description)/urdf/stacks/camera_stand.urdf.xacro"/>
+
+  <!-- eddiebot -->
+  <xacro:base/>
+  <xacro:layer1 parent="base_link"/>
+  <xacro:camera_stand parent="plate_0_link"/>
+</robot>

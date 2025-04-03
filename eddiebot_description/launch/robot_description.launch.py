@@ -9,29 +9,33 @@ from launch.substitutions import Command, PathJoinSubstitution
 from launch.substitutions.launch_configuration import LaunchConfiguration
 from launch_ros.descriptions import ParameterValue
 from launch_ros.actions import Node
-
+from launch.substitutions import TextSubstitution, PythonExpression
 
 ARGUMENTS = [
-    DeclareLaunchArgument('model', default_value='eddie_kinect_v1',
-                          choices=['eddie_kinect_v1', 'eddie_kinect_v2'],
-                          description='Eddiebot Model'),
+    DeclareLaunchArgument('model', default_value='eddiebot',
+                          description='Model'),
     DeclareLaunchArgument('use_sim_time', default_value='false',
                           choices=['true', 'false'],
                           description='use_sim_time'),
-    DeclareLaunchArgument('robot_name', default_value='eddiebot',
+    DeclareLaunchArgument('robot_name', default_value=LaunchConfiguration('model'),
                           description='Robot name'),
-    DeclareLaunchArgument('namespace', default_value=LaunchConfiguration('robot_name'),
-                          description='Robot namespace'),
+    # DeclareLaunchArgument('namespace', default_value=LaunchConfiguration('robot_name'),
+    #                       description='Robot namespace'),
 ]
 
 
 def generate_launch_description():
-    pkg_eddiebot_description = get_package_share_directory('eddiebot_description')
-    xacro_file = PathJoinSubstitution([pkg_eddiebot_description,
-                                       'robots',
-                                       LaunchConfiguration('model'),
-                                       'eddiebot.urdf.xacro'])
-    namespace = LaunchConfiguration('namespace')
+    pkg_description = get_package_share_directory('eddiebot_description')
+
+    xacro_filename = PythonExpression(["'", LaunchConfiguration("model"), "' + '.urdf.xacro'"])
+
+    xacro_file = PathJoinSubstitution([
+        pkg_description,
+        'urdf',
+        'robots',
+        xacro_filename
+    ])
+    # namespace = LaunchConfiguration('namespace')
 
     robot_state_publisher = Node(
         package='robot_state_publisher',
@@ -43,31 +47,50 @@ def generate_launch_description():
             {'robot_description': ParameterValue(Command([
                 'xacro', ' ', xacro_file, ' ',
                 'gazebo:=ignition', ' ',
-                'namespace:=', namespace]), value_type=str)},
+                # 'namespace:=', namespace
+            ]), value_type=str)},
         ],
     )
 
-    joint_state_publisher = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        name='joint_state_publisher',
-        output='screen',
-        parameters=[
-            {'use_sim_time': LaunchConfiguration('use_sim_time')},
-            {'source_list': ['/model/eddiebot/joint_states']},
-        ],
+    # joint_state_publisher = Node(
+    #     package='joint_state_publisher',
+    #     executable='joint_state_publisher',
+    #     name='joint_state_publisher',
+    #     output='screen',
+    #     parameters=[
+    #         {'use_sim_time': LaunchConfiguration('use_sim_time')},
+    #         # {'source_list': ['/model/eddiebot/joint_states']},
+    #     ],
+    # )
+
+    robot_controllers = PathJoinSubstitution(
+        [
+            pkg_description,
+            'config',
+            'diff_drive_controller.yaml',
+        ]
     )
 
-    joint_state_publisher_gui = Node(
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        name='joint_state_publisher_gui',
-        output='screen',
-        parameters=[{'use_sim_time': LaunchConfiguration('use_sim_time')}],
+    diff_drive_controller = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'diff_drive_controller',
+            '--param-file',
+            robot_controllers,
+            ],
+    )
+
+    joint_state_broadcaster = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_state_broadcaster']
     )
 
     # Add nodes to LaunchDescription
     ld = LaunchDescription(ARGUMENTS)
-    ld.add_action(joint_state_publisher)
+    # ld.add_action(joint_state_publisher)
     ld.add_action(robot_state_publisher)
+    ld.add_action(diff_drive_controller)
+    ld.add_action(joint_state_broadcaster)
     return ld

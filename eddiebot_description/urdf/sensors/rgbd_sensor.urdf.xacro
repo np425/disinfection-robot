@@ -64,10 +64,11 @@
                     </noise>
                 </camera>
                 <always_on>1</always_on>
-                <update_rate>5</update_rate>
+                <update_rate>20</update_rate>
                 <visualize>false</visualize>
-                <topic>kinect_rgbd_camera</topic>
+                <topic>rgbd_camera</topic>
                 <enable_metrics>true</enable_metrics>
+                <gz_frame_id>camera_link</gz_frame_id>
             </sensor>
         </gazebo>
     </xacro:macro>

@@ -8,13 +8,13 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 
 
 ARGUMENTS = [
-    DeclareLaunchArgument('namespace', default_value='',
-                          description='Robot namespace'),
+    # DeclareLaunchArgument('namespace', default_value='',
+    #                       description='Robot namespace'),
     DeclareLaunchArgument('world', default_value='empty',
                           description='Eddie World'),
-    DeclareLaunchArgument('model', default_value='eddie_kinect_v1',
-                          choices=['eddie_kinect_v1'],
-                          description='Eddiebot Model'),
+    # DeclareLaunchArgument('model', default_value='eddie_kinect_v1',
+    #                       choices=['eddie_kinect_v1'],
+    #                       description='Eddiebot Model'),
     DeclareLaunchArgument('use_sim_time', default_value='false',
                           choices=['true', 'false'],
                           description='use_sim_time'),
@@ -36,6 +36,8 @@ def generate_launch_description():
         [pkg_eddiebot_gazebo, 'launch', 'gz_sim.launch.py'])
     robot_spawn_launch = PathJoinSubstitution(
         [pkg_eddiebot_gazebo, 'launch', 'eddiebot_spawn.launch.py'])
+    gz_bridge_launch = PathJoinSubstitution(
+        [pkg_eddiebot_gazebo, 'launch', 'ros_gz_bridge.launch.py'])
 
     gz_sim = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([gz_sim_launch]),
@@ -47,7 +49,7 @@ def generate_launch_description():
     robot_spawn = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([robot_spawn_launch]),
         launch_arguments=[
-            ('namespace', LaunchConfiguration('namespace')),
+            # ('namespace', LaunchConfiguration('namespace')),
             ('use_sim_time', LaunchConfiguration('use_sim_time')),
             ('x', LaunchConfiguration('x')),
             ('y', LaunchConfiguration('y')),
@@ -55,8 +57,16 @@ def generate_launch_description():
             ('yaw', LaunchConfiguration('yaw'))]
     )
 
+    gz_bridge = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([gz_bridge_launch]),
+        launch_arguments=[
+            ('use_sim_time', LaunchConfiguration('use_sim_time')),
+        ]
+    )
+
     # Create launch description and add actions
     ld = LaunchDescription(ARGUMENTS)
+    ld.add_action(gz_bridge)
     ld.add_action(gz_sim)
     ld.add_action(robot_spawn)
     return ld

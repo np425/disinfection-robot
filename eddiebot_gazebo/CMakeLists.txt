@@ -15,7 +15,7 @@ find_package(robot_state_publisher REQUIRED)
 find_package(rviz2 REQUIRED)
 
 install(
-  DIRECTORY launch worlds
+  DIRECTORY launch worlds models
   DESTINATION share/${PROJECT_NAME}
 )
 

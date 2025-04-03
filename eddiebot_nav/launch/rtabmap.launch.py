@@ -18,7 +18,7 @@ ARGUMENTS = [
     DeclareLaunchArgument('use_sim_time', default_value='false',
                           choices=['true', 'false'],
                           description='use_sim_time'),
-    DeclareLaunchArgument('use_rtabmap_viz', default_value='false',
+    DeclareLaunchArgument('use_rtabmap_viz', default_value='true',
                           choices=['true', 'false'],
                           description='Launch rtabmap_viz'),
     DeclareLaunchArgument('qos', default_value='2',
@@ -40,16 +40,23 @@ def generate_launch_description():
             'use_sim_time': LaunchConfiguration('use_sim_time'),
 
             # rtabmap ros wrapper parameters
-            'frame_id': 'base_footprint',
+            'frame_id': 'base_link',
             'map_frame_id': 'map',
             'subscribe_depth': True,
-            'subscribe_scan': True,
+            'subscribe_scan': False,
             'subscribe_rgbd': False,
             'qos_image': LaunchConfiguration('qos'),
             'qos_scan': LaunchConfiguration('qos'),
-            'use_action_for_goal': True,
+            'use_action_for_goal': False,
             'approx_sync': True,
-            'queue_size': 30,
+            'sync_queue_size': 100,
+
+            'odom_frame_id': 'odom',
+            'publish_tf': True,
+            'grid_map_publisher': True,
+            'use_odometry': True,
+
+            'wait_for_transform': 0.2,
 
             # rtabmap parameters
             'Optimizer/Strategy': '1',
@@ -62,14 +69,15 @@ def generate_launch_description():
             'RGBD/LinearUpdate': '0.01',
             'RGBD/OptimizeFromGraphEnd': 'false',
 
-            # 'Grid/FromDepth': 'true',
-            # 'Grid/MaxObstacleHeight': '0.7',
-            # 'Reg/Strategy': '0'
+            'Grid/FromDepth': 'true',
+            'Grid/MaxObstacleHeight': '0.7',
+            'Reg/Strategy': '0'
     }
     rtabmap_remappings = [
-            ('rgb/image', '/image_raw'),
-            ('rgb/camera_info', '/camera_info'),
-            ('depth/image', '/depth/image_raw'),
+            ('rgb/image', '/rgbd_camera/image'),
+            ('rgb/camera_info', '/rgbd_camera/camera_info'),
+            ('depth/image', '/rgbd_camera/depth_image'),
+            ('odom', '/diff_drive_controller/odom'),
     ]
     rtabmap_arguments = ['-d', '--ros-args', '--log-level', 'Warn']
 
