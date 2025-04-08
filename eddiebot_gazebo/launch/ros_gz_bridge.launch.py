@@ -89,6 +89,17 @@ def generate_launch_description():
             ['/rgbd_camera/points'      + '@sensor_msgs/msg/PointCloud2' + '[gz.msgs.PointCloudPacked']
         ])
 
+    lidar_bridge = Node(
+        package='ros_gz_bridge',
+        executable='parameter_bridge',
+        name='lidar_bridge',
+        parameters=[{
+            'use_sim_time': use_sim_time
+            }],
+        arguments=[
+            ['/scan' + '@sensor_msgs/msg/LaserScan'  + '[gz.msgs.LaserScan'],
+        ])
+
     clock_bridge = Node(package='ros_gz_bridge', executable='parameter_bridge',
                         name='clock_bridge',
                         output='screen',
@@ -102,6 +113,7 @@ def generate_launch_description():
     # ld.add_action(odom_bridge)
     # ld.add_action(cmd_vel_bridge)
     ld.add_action(rgbd_camera_bridge)
+    ld.add_action(lidar_bridge)
     ld.add_action(clock_bridge)
     ld.add_action(cmd_vel_bridge)
     return ld

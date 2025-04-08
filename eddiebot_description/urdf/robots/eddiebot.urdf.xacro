@@ -3,9 +3,15 @@
   <xacro:include filename="$(find eddiebot_description)/urdf/stacks/base.urdf.xacro"/>
   <xacro:include filename="$(find eddiebot_description)/urdf/stacks/layer1.urdf.xacro"/>
   <xacro:include filename="$(find eddiebot_description)/urdf/stacks/camera_stand.urdf.xacro"/>
+  <xacro:include filename="$(find eddiebot_description)/urdf/sensors/rplidar.urdf.xacro" />
 
   <!-- eddiebot -->
   <xacro:base/>
   <xacro:layer1 parent="base_link"/>
-  <xacro:camera_stand parent="plate_0_link"/>
+  <!-- <xacro:camera_stand parent="plate_0_link"/> -->
+
+  <xacro:rplidar name="rplidar" parent_link="plate_0_link">
+    <origin xyz="0 0 0.035"
+            rpy="0 0 ${pi/2}"/>
+  </xacro:rplidar>
 </robot>
