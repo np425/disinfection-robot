@@ -36,17 +36,17 @@ def generate_launch_description():
     #          '@sensor_msgs/msg/JointState@gz.msgs.Model']
     #     ])
 
-    cmd_vel_bridge = Node(
-        package='ros_gz_bridge',
-        executable='parameter_bridge',
-        name='cmd_vel_bridge',
-        output='screen',
-        parameters=[{
-            'use_sim_time': use_sim_time
-        }],
-        arguments=[
-            ['/diff_drive_controller/cmd_vel' + '@geometry_msgs/msg/Twist' + '@gz.msgs.Twist'],
-        ])
+    # cmd_vel_bridge = Node(
+    #     package='ros_gz_bridge',
+    #     executable='parameter_bridge',
+    #     name='cmd_vel_bridge',
+    #     output='screen',
+    #     parameters=[{
+    #         'use_sim_time': use_sim_time
+    #     }],
+    #     arguments=[
+    #         ['/diff_drive_controller/cmd_vel' + '@geometry_msgs/msg/Twist' + '@gz.msgs.Twist'],
+    #     ])
 
     # odom_base_tf_bridge = Node(
     #     package='ros_gz_bridge',
@@ -115,5 +115,5 @@ def generate_launch_description():
     ld.add_action(rgbd_camera_bridge)
     ld.add_action(lidar_bridge)
     ld.add_action(clock_bridge)
-    ld.add_action(cmd_vel_bridge)
+    # ld.add_action(cmd_vel_bridge)
     return ld
