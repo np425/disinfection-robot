@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:macro name="uv_lamp" params="name parent_link *origin">
+    <link name="${name}_link">
+
+      <!-- Visual: main rectangular body -->
+      <visual>
+        <origin xyz="0 0 0.0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.24 0.06 0.03"/>
+        </geometry>
+        <material name="uv_color">
+          <color rgba="0.8 0.8 0.8 1"/>
+        </material>
+      </visual>
+
+      <!-- Visual: cylinder at the back -->
+      <visual>
+        <origin xyz="0.0 0.0 0.015" rpy="0 ${pi/2} 0"/>
+        <geometry>
+          <cylinder length="0.24" radius="0.03"/>
+        </geometry>
+        <material name="uv_color"/>
+      </visual>
+
+      <!-- Collision geometry -->
+      <collision>
+        <origin xyz="0 0 0.0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.18 0.06 0.01"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0 0 -0.01" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.02" radius="0.015"/>
+        </geometry>
+      </collision>
+
+      <!-- Inertial -->
+      <inertial>
+        <mass value="1.0"/>
+        <origin xyz="0 0 0.03"/>
+        <inertia ixx="0.0005" ixy="0.0" ixz="0.0"
+                 iyy="0.0005" iyz="0.0"
+                 izz="0.0003"/>
+      </inertial>
+    </link>
+
+    <!-- Gazebo visual material -->
+    <gazebo reference="${name}_link">
+      <material>Gazebo/White</material>
+    </gazebo>
+
+    <joint name="${name}_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${name}_link"/>
+      <xacro:insert_block name="origin"/>
+    </joint>
+  </xacro:macro>
+
+</robot>

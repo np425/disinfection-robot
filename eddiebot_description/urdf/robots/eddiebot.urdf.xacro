@@ -4,6 +4,8 @@
   <xacro:include filename="$(find eddiebot_description)/urdf/stacks/layer1.urdf.xacro"/>
   <xacro:include filename="$(find eddiebot_description)/urdf/stacks/camera_stand.urdf.xacro"/>
   <xacro:include filename="$(find eddiebot_description)/urdf/sensors/rplidar.urdf.xacro" />
+  <xacro:include filename="$(find eddiebot_description)/urdf/utils/l_bracket.urdf.xacro" />
+  <xacro:include filename="$(find eddiebot_description)/urdf/utils/uv_lamp.urdf.xacro" />
 
   <!-- eddiebot -->
   <xacro:base/>
@@ -11,7 +13,20 @@
   <!-- <xacro:camera_stand parent="plate_0_link"/> -->
 
   <xacro:rplidar name="rplidar" parent_link="plate_0_link">
-    <origin xyz="0 0 0.035"
-            rpy="0 0 ${pi/2}"/>
+    <origin xyz="0 0 0.05"
+            rpy="0 0 ${pi}"/>
   </xacro:rplidar>
+
+  <xacro:l_bracket name="left_lamp_holder" parent_link="plate_0_link">
+      <origin xyz="0.1 0.0 0.00475" rpy="0 0 ${-pi/2}"/>
+  </xacro:l_bracket>
+
+  <xacro:l_bracket name="right_lamp_holder" parent_link="plate_0_link">
+      <origin xyz="-0.1 0.0 0.00475" rpy="0 0 ${-pi/2}"/>
+  </xacro:l_bracket>
+
+  <xacro:uv_lamp name="uv_lamp" parent_link="left_lamp_holder_link">
+      <origin xyz="-0.045 -0.1 0.19" rpy="${pi/2} 0 ${pi/2}"/>
+  </xacro:uv_lamp>
+
 </robot>
