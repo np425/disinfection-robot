@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot name="eddiebot" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find eddiebot_description)/urdf/utils/uv_lamp.urdf.xacro" />
+
+  <link name="world"/>
+
+  <xacro:uv_lamp name="uv_lamp" parent_link="world">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:uv_lamp>
+
+</robot>
