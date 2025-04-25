@@ -53,10 +53,10 @@ public:
     return serial_conn_.IsOpen();
   }
 
-  std::string send_msg(const std::string &msg_to_send, bool print_output = false)
+  std::string send_cmd(const std::string &msg_to_send, bool print_output = false)
   {
     serial_conn_.FlushIOBuffers(); // Just in case
-    serial_conn_.Write(msg_to_send);
+    serial_conn_.Write(msg_to_send + "\n");
 
     std::string response = "";
     try
@@ -79,7 +79,7 @@ public:
 
   void read_encoder_values(double &l_pos, double &r_pos, double &l_vel, double &r_vel)
   {
-    std::string response = send_msg("get\n");
+    std::string response = send_cmd("get encoder");
     size_t p1 = response.find(',');
     size_t p2 = response.find(',', p1 + 1);
     size_t p3 = response.find(',', p2 + 1);
@@ -92,8 +92,7 @@ public:
 
   void set_motor_velocities(double vel_l, double vel_r)
   {
-    send_msg("set MOT_l_speed_rad_s " + std::to_string(vel_l) + "\n");
-    send_msg("set MOT_r_speed_rad_s " + std::to_string(vel_r) + "\n");
+    send_cmd("set speed_rad_s " + std::to_string(vel_l) + " " + std::to_string(vel_r));
   }
 
 private:

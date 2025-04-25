@@ -85,6 +85,7 @@ private:
   Wheel wheel_l_;
   Wheel wheel_r_;
   Config cfg_;
+  rclcpp::Logger logger_ = rclcpp::get_logger("DiffBotSystemHardware");
 };
 
 }  // namespace eddiebot_description

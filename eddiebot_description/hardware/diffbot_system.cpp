@@ -126,6 +126,8 @@ hardware_interface::return_type DiffBotSystemHardware::read(
   }
 
   comms_.read_encoder_values(wheel_l_.pos, wheel_r_.pos, wheel_l_.vel, wheel_r_.vel);
+  // RCLCPP_INFO(logger_, "Encoder values - pos: left = %f, right = %f | vel: left = %f, right = %f",
+  //   wheel_l_.pos, wheel_r_.pos, wheel_l_.vel, wheel_r_.vel);
 
   return hardware_interface::return_type::OK;
 }
@@ -139,6 +141,7 @@ hardware_interface::return_type DiffBotSystemHardware::write(
   }
 
   comms_.set_motor_velocities(wheel_l_.cmd, wheel_r_.cmd);
+  RCLCPP_INFO(logger_, "Set motor velocities: left = %f, right = %f", wheel_l_.cmd, wheel_r_.cmd);
 
   return hardware_interface::return_type::OK;
 }
