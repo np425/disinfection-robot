@@ -1,0 +1,9 @@
+<library path="mock_uv_hardware">
+  <class name="mock_uv_hardware/MockUVSystem"
+         type="mock_uv_hardware::MockUVSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+        Mock UV lamp hardware interface for testing
+    </description>
+  </class>
+</library>

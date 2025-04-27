@@ -1,0 +1,9 @@
+<library path="disinfectbot_hardware">
+  <class name="disinfectbot_hardware/DisinfectBotSystem"
+         type="disinfectbot_hardware::DisinfectBotSystem"
+         base_class_type="hardware_interface::SystemInterface">
+    <description>
+        Hardware interface for DisinfectBot mobile robot using ros2_control. Implements a system interface with velocity command and position state for differential-drive control.
+    </description>
+  </class>
+</library>

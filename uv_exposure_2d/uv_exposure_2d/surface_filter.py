@@ -1,15 +1,15 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSDurabilityPolicy
-from tf2_ros import Buffer, TransformListener, TransformException
+from tf2_ros import Buffer, TransformListener
 from sensor_msgs.msg import LaserScan
 from nav_msgs.msg import OccupancyGrid
 from map_msgs.msg import OccupancyGridUpdate
+from builtin_interfaces.msg import Time
 import numpy as np
-import math 
+from scipy.ndimage import binary_dilation
+from uv_common.tf_utils import lookup_tf, apply_tf_2d
 
-# TODO: transform points to cells function with tolerance
-# TODO: publish occupancygrid representing cells that are hit by UV light
 
 class SurfaceFilter(Node):
     def __init__(self):
@@ -17,7 +17,7 @@ class SurfaceFilter(Node):
 
         self.declare_parameter('angle_min', -np.pi)
         self.declare_parameter('angle_max', np.pi)
-        self.declare_parameter('distance_max', 10.0) 
+        self.declare_parameter('distance_max', 2.0) 
         self.declare_parameter('tolerance_map_hit', 0.1)
         self.declare_parameter('frame_scan_transform', 'uv_lamp_link') 
 
@@ -32,6 +32,7 @@ class SurfaceFilter(Node):
 
         self.map_array = None
         self.map_info = None
+        self.map_header = None
 
         self.subscription_scan = self.create_subscription(
             LaserScan,
@@ -52,18 +53,20 @@ class SurfaceFilter(Node):
 
         self.subscription_map_update = self.create_subscription(
             OccupancyGridUpdate,
-            '/map_update',
+            '/map_updates',
             self.map_update_callback,
             10
         )
 
-        self.publisher_uv_map = self.create_publisher(OccupancyGrid, '/uv_exposure_map', 10)
+        self.pub_uv_map = self.create_publisher(OccupancyGridUpdate, '/uv_exposure_map', 10)
+        self.pub_uv_scan = self.create_publisher(LaserScan, '/uv_exposure_scan', 10)
 
         self.get_logger().info(f"SurfaceFilter node started. Transforming scans to frame: '{self.frame_scan_transform}'")
 
     def map_callback(self, msg: OccupancyGrid):
         self.map_info = msg.info
         self.map_array = np.array(msg.data, dtype=np.int8).reshape((msg.info.height, msg.info.width))
+        self.map_header = msg.header
         self.get_logger().info("Map received.")
 
     def map_update_callback(self, msg: OccupancyGridUpdate):
@@ -71,51 +74,44 @@ class SurfaceFilter(Node):
             return
         patch = np.array(msg.data, dtype=np.int8).reshape((msg.height, msg.width))
         self.map_array[msg.y:msg.y + msg.height, msg.x:msg.x + msg.width] = patch
+        self.map_header = msg.header
 
     def scan_callback(self, msg: LaserScan):
-        tf = self.lookup_transform(msg)
-        if tf is None:
-            return None
+        tf_scan_to_uv = lookup_tf(self.tf_buffer, msg.header.frame_id, self.frame_scan_transform, msg.header.stamp)
+        if tf_scan_to_uv is None:
+            return
 
-        points = self.transform_points(msg, tf)
-        points = self.filter_by_angle(points)
-        points = self.filter_by_distance(points)
-        #points = self.filter_by_map(points)
+        points_uv = self.scan_to_points(msg)
+        points_uv = apply_tf_2d(points_uv, tf_scan_to_uv)
+        points_uv = self.filter_by_angle(points_uv)
+        points_uv = self.filter_by_distance(points_uv)
 
-        transformed_scan = self.build_scan(msg, points)
+        out_scan = self.points_to_scan(points_uv, msg)
+        self.pub_uv_scan.publish(out_scan)
 
-        self.publisher_transformed_scan.publish(transformed_scan)
-    
-    def lookup_transform(self, scan_in: LaserScan):
-        source_frame = scan_in.header.frame_id
-        target_frame = self.frame_scan_transform
-        scan_time = scan_in.header.stamp
-        timeout_duration = rclpy.duration.Duration(seconds=0.1)
+        if self.map_header is None or self.map_info is None or self.map_array is None:
+            return
 
-        if not self.tf_buffer.can_transform(target_frame, source_frame, scan_time, timeout=timeout_duration):
-            self.get_logger().warn(f"Could not transform '{source_frame}' to '{target_frame}' at time {scan_time.sec}.{scan_time.nanosec}. Skipping scan.", throttle_duration_sec=5.0)
-            return None
+        tf_uv_to_map = lookup_tf(self.tf_buffer, self.frame_scan_transform, self.map_header.frame_id, rclpy.time.Time().to_msg())
+        if tf_uv_to_map is None:
+            return
 
-        try:
-            return self.tf_buffer.lookup_transform(target_frame, source_frame, scan_time, timeout=timeout_duration)
-        except TransformException as ex:
-            self.get_logger().error(f"Transform lookup failed: {ex}")
-            return None
+        points_map = apply_tf_2d(points_uv, tf_uv_to_map)
 
-    def transform_points(self, scan_in: LaserScan, tf):
-        q = tf.transform.rotation
-        t = tf.transform.translation
-        yaw = math.atan2(2*(q.w*q.z + q.x*q.y), 1 - 2*(q.y**2 + q.z**2))
-        R = np.array([[math.cos(yaw), -math.sin(yaw)], [math.sin(yaw), math.cos(yaw)]])
-        tx, ty = t.x, t.y
+        roi, roi_offset = self.extract_roi(points_map, self.tolerance_map_hit)
+        roi_surfaces = self.filter_by_map(points_map, roi, roi_offset)
 
+        out_grid = self.roi_to_occupancygrid(roi_surfaces, roi_offset, msg.header.stamp)
+        self.pub_uv_map.publish(out_grid)
+
+    def scan_to_points(self, scan_in: LaserScan) -> np.ndarray:
         num_points = len(scan_in.ranges)
         angles = scan_in.angle_min + np.arange(num_points) * scan_in.angle_increment
         ranges = np.array(scan_in.ranges)
         ranges[~np.isfinite(ranges)] = 0.0
         x = ranges * np.cos(angles)
         y = ranges * np.sin(angles)
-        return np.stack([x, y], axis=1) @ R.T + np.array([tx, ty])
+        return np.stack([x, y], axis=1)
 
     def filter_by_angle(self, points: np.ndarray) -> np.ndarray:
         angles = np.arctan2(points[:, 1], points[:, 0])
@@ -125,107 +121,108 @@ class SurfaceFilter(Node):
         dists = np.linalg.norm(points, axis=1)
         return points[dists <= self.distance_max]
 
-    def filter_by_map(self, points: np.ndarray) -> np.ndarray:
+    def filter_by_map(self, points_map_frame: np.ndarray, roi: np.ndarray, roi_offset: tuple[int, int]) -> np.ndarray:
+        if self.map_info is None or roi.size == 0 or points_map_frame.size == 0:
+            return np.zeros_like(roi, dtype=np.int8)
+
+        res = self.map_info.resolution
+        ox = self.map_info.origin.position.x
+        oy = self.map_info.origin.position.y
+        x_min, y_min = roi_offset
+        height, width = roi.shape
+
+        occupied_cells = (roi == 100)
+        hit_radius_cells = int(np.ceil(self.tolerance_map_hit / res))
+        hit_structure = np.ones((2 * hit_radius_cells + 1, 2 * hit_radius_cells + 1), dtype=bool)
+        expanded_occupied_cells = binary_dilation(occupied_cells, structure=hit_structure)
+
+        indices = ((points_map_frame - [ox, oy]) / res).astype(int)
+        valid = (indices[:, 0] >= x_min) & (indices[:, 0] < x_min + width) & (indices[:, 1] >= y_min) & (indices[:, 1] < y_min + height)
+        indices = indices[valid]
+        shifted_indices = indices - np.array([x_min, y_min])
+        hits = expanded_occupied_cells[shifted_indices[:, 1], shifted_indices[:, 0]]
+
+        surface_hit_mask = np.zeros_like(roi, dtype=bool)
+        surface_hit_mask[shifted_indices[hits, 1], shifted_indices[hits, 0]] = True
+        surface_hit_mask_expanded = binary_dilation(surface_hit_mask, structure=hit_structure)
+
+        final_surface_mask = surface_hit_mask_expanded & occupied_cells
+        filtered_roi = np.where(final_surface_mask, 100, 0).astype(np.int8)
+
+        return filtered_roi
+
+    def extract_roi(self, points: np.ndarray, padding: float) -> tuple[np.ndarray, tuple[int, int]]:
+        if self.map_array is None or self.map_info is None or points.shape[0] == 0:
+            return np.zeros((0, 0), dtype=np.int8), (0, 0)
+
+        res = self.map_info.resolution
+        ox = self.map_info.origin.position.x
+        oy = self.map_info.origin.position.y
+        height, width = self.map_array.shape
+
+        x_world_min = np.min(points[:, 0]) - padding
+        x_world_max = np.max(points[:, 0]) + padding
+        y_world_min = np.min(points[:, 1]) - padding
+        y_world_max = np.max(points[:, 1]) + padding
+
+        x_min = max(int((x_world_min - ox) / res), 0)
+        x_max = min(int((x_world_max - ox) / res), width - 1)
+        y_min = max(int((y_world_min - oy) / res), 0)
+        y_max = min(int((y_world_max - oy) / res), height - 1)
+
+        roi = self.map_array[y_min:y_max+1, x_min:x_max+1]
+        roi_offset = (x_min, y_min)
+
+        return roi, roi_offset
+
+    def points_to_scan(self, points: np.ndarray, reference_scan: LaserScan) -> LaserScan:
+        angles = np.arctan2(points[:, 1], points[:, 0])
+        ranges = np.linalg.norm(points, axis=1)
+
+        scan = LaserScan()
+        scan.header.stamp = reference_scan.header.stamp  
+        scan.header.frame_id = self.frame_scan_transform  
+        scan.angle_min = reference_scan.angle_min
+        scan.angle_max = reference_scan.angle_max
+        scan.angle_increment = reference_scan.angle_increment
+        scan.time_increment = reference_scan.time_increment
+        scan.scan_time = reference_scan.scan_time
+        scan.range_min = reference_scan.range_min
+        scan.range_max = reference_scan.range_max
+
+        num_ranges = int(np.ceil((scan.angle_max - scan.angle_min) / scan.angle_increment))
+        ranges_array = np.full(num_ranges, float('inf'), dtype=np.float32)
+
+        valid = (angles >= scan.angle_min) & (angles <= scan.angle_max)
+        if not np.any(valid):
+            scan.ranges = ranges_array.tolist()
+            return scan
+
+        angles = angles[valid]
+        ranges = ranges[valid]
+        indices = ((angles - scan.angle_min) / scan.angle_increment).astype(np.int32)
+        indices = np.clip(indices, 0, num_ranges - 1)
+
+        np.minimum.at(ranges_array, indices, ranges)
+
+        scan.ranges = ranges_array.tolist()
+        return scan
+
+    def roi_to_occupancygrid(self, roi: np.ndarray, roi_offset: tuple[int, int], stamp: Time) -> OccupancyGridUpdate:
         if self.map_array is None or self.map_info is None:
-            return np.empty((0, 2))
+            return OccupancyGridUpdate()
 
-        res = self.map_info.resolution
-        ox = self.map_info.origin.position.x
-        oy = self.map_info.origin.position.y
-        height, width = self.map_array.shape
+        x_min, y_min = roi_offset
 
-        indices = ((points - [ox, oy]) / res).astype(int)
-
-        valid_mask = (
-            (indices[:, 0] >= 0) & (indices[:, 0] < width) &
-            (indices[:, 1] >= 0) & (indices[:, 1] < height)
-        )
-
-        indices = indices[valid_mask]
-        points = points[valid_mask]
-
-        radius_cells = int(np.ceil(self.tolerance_map_hit / res))
-        dx, dy = np.meshgrid(np.arange(-radius_cells, radius_cells + 1),
-                            np.arange(-radius_cells, radius_cells + 1))
-        offsets = np.stack((dx.ravel(), dy.ravel()), axis=1)
-        dists = np.sqrt((offsets**2).sum(axis=1)) * res
-        offsets = offsets[dists <= self.tolerance_map_hit]
-
-        # Expand to (num_points, num_offsets, 2)
-        expanded_indices = indices[:, np.newaxis, :] + offsets[np.newaxis, :, :]
-        flat_indices = expanded_indices.reshape(-1, 2)
-
-        # Clamp to inside bounds
-        in_bounds = (
-            (flat_indices[:, 0] >= 0) & (flat_indices[:, 0] < width) &
-            (flat_indices[:, 1] >= 0) & (flat_indices[:, 1] < height)
-        )
-        flat_indices = flat_indices[in_bounds]
-
-        # Convert (x, y) to map[y, x] index
-        map_hits = np.zeros(len(points), dtype=bool)
-        x_idx = flat_indices[:, 0]
-        y_idx = flat_indices[:, 1]
-        occupied_mask = self.map_array[y_idx, x_idx] == 100
-
-        # Reverse lookup: which point each flat index came from
-        num_offsets = len(offsets)
-        point_indices = np.repeat(np.arange(len(points)), num_offsets)[in_bounds]
-
-        # Mark points that have at least one nearby occupied cell
-        map_hits[np.unique(point_indices[occupied_mask])] = True
-
-        return points[map_hits]
-
-
-    def publish_uv_coverage_map(self, uv_points: np.ndarray):
-        if self.map_array is None or self.map_info is None or len(uv_points) == 0:
-            return
-
-        res = self.map_info.resolution
-        ox = self.map_info.origin.position.x
-        oy = self.map_info.origin.position.y
-        height, width = self.map_array.shape
-
-        # Convert points to map indices
-        indices = ((uv_points - [ox, oy]) / res).astype(int)
-
-        # Clamp to map bounds
-        indices = indices[
-            (indices[:, 0] >= 0) & (indices[:, 0] < width) &
-            (indices[:, 1] >= 0) & (indices[:, 1] < height)
-        ]
-
-        if len(indices) == 0:
-            return
-
-        x_min, y_min = np.min(indices, axis=0)
-        x_max, y_max = np.max(indices, axis=0)
-        w = x_max - x_min + 1
-        h = y_max - y_min + 1
-
-        cropped_array = self.map_array[y_min:y_min + h, x_min:x_min + w]
-
-        from nav_msgs.msg import OccupancyGrid
-        from std_msgs.msg import Header
-        from geometry_msgs.msg import Pose
-
-        cropped_map = OccupancyGrid()
-        cropped_map.header = Header()
-        cropped_map.header.stamp = self.get_clock().now().to_msg()
-        cropped_map.header.frame_id = "map"
-        cropped_map.info.resolution = res
-        cropped_map.info.width = w
-        cropped_map.info.height = h
-        cropped_map.info.origin = Pose()
-        cropped_map.info.origin.position.x = ox + x_min * res
-        cropped_map.info.origin.position.y = oy + y_min * res
-        cropped_map.info.origin.position.z = 0.0
-        cropped_map.info.origin.orientation.w = 1.0
-
-        cropped_map.data = cropped_array.flatten().tolist()
-        self.uv_map_pub.publish(cropped_map)
-
+        update = OccupancyGridUpdate()
+        update.header.frame_id = self.map_header.frame_id
+        update.header.stamp = stamp
+        update.x = x_min
+        update.y = y_min
+        update.width = roi.shape[1]
+        update.height = roi.shape[0]
+        update.data = roi.flatten().tolist()
+        return update
 
 def main(args=None):
     rclpy.init(args=args)

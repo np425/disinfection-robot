@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<robot name="disinfectbot" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:include filename="$(find disinfectbot_description)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find disinfectbot_description)/urdf/base/base.urdf.xacro"/>
+  <xacro:include filename="$(find disinfectbot_description)/urdf/base/layer1.urdf.xacro"/>
+  <xacro:include filename="$(find disinfectbot_description)/urdf/devices/rplidar.urdf.xacro" />
+  <xacro:include filename="$(find disinfectbot_description)/urdf/devices/uv_lamp.urdf.xacro" />
+  <xacro:include filename="$(find disinfectbot_description)/urdf/utils/l_bracket.urdf.xacro" />
+  <xacro:include filename="$(find disinfectbot_description)/urdf/control/ros2_control.urdf.xacro" />
+  <xacro:arg name="use_sim" default="false"/>
+
+
+  <xacro:base/>
+  <xacro:layer1 parent="base_link"/>
+
+  <xacro:rplidar name="rplidar" parent_link="plate_0_link">
+    <origin xyz="0 0 0.05"
+            rpy="0 0 ${pi}"/>
+  </xacro:rplidar>
+
+  <xacro:l_bracket name="left_lamp_holder" parent_link="plate_0_link">
+      <origin xyz="0.1 0.0 0.00475" rpy="0 0 ${-pi/2}"/>
+  </xacro:l_bracket>
+
+  <xacro:l_bracket name="right_lamp_holder" parent_link="plate_0_link">
+      <origin xyz="-0.1 0.0 0.00475" rpy="0 0 ${-pi/2}"/>
+  </xacro:l_bracket>
+
+  <xacro:uv_lamp name="uv_lamp" parent_link="left_lamp_holder_link">
+      <origin xyz="-0.039 -0.1 0.19" rpy="0 0 ${pi}"/>
+  </xacro:uv_lamp>
+
+</robot>

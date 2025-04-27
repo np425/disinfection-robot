@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(uv_msgs)
+project(disinfectbot_gazebo)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -7,18 +7,16 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
-find_package(std_msgs REQUIRED)
-find_package(nav_msgs REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
-# find_package(<dependency> REQUIRED)
+find_package(urdf REQUIRED)
+find_package(xacro REQUIRED)
+find_package(robot_state_publisher REQUIRED)
+find_package(rviz2 REQUIRED)
 
-rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/DoseSparseGrid.msg"
-  "msg/DoseSparseGridUpdate.msg"
-  "msg/UVStateStamped.msg"
-  DEPENDENCIES std_msgs nav_msgs
+install(
+  DIRECTORY launch worlds models
+  DESTINATION share/${PROJECT_NAME}
 )
 
 if(BUILD_TESTING)
@@ -33,5 +31,4 @@ if(BUILD_TESTING)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-ament_export_dependencies(rosidl_default_runtime)
 ament_package()
