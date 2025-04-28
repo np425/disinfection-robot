@@ -14,7 +14,7 @@ ARGUMENTS = [
     DeclareLaunchArgument('use_sim_time', default_value='false',
                           choices=['true', 'false'],
                           description='Use sim time'),
-    DeclareLaunchArgument('sync', default_value='true',
+    DeclareLaunchArgument('sync', default_value='false',
                           choices=['true', 'false'],
                           description='Use synchronous SLAM'),
     DeclareLaunchArgument('namespace', default_value='',
@@ -23,7 +23,7 @@ ARGUMENTS = [
 
 
 def generate_launch_description():
-    pkg_eddiebot_nav = get_package_share_directory('eddiebot_nav')
+    pkg_eddiebot_nav = get_package_share_directory('disinfectbot_nav')
 
     namespace = LaunchConfiguration('namespace')
     sync = LaunchConfiguration('sync')

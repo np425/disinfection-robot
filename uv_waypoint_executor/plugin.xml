@@ -1,0 +1,7 @@
+<library path="uv_waypoint_executor">
+  <class 
+  name="uv_waypoint_executor::UVLampExecutor" 
+  type="uv_waypoint_executor::UVLampExecutor" 
+  base_class_type="nav2_core::WaypointTaskExecutor">
+  </class>
+</library>

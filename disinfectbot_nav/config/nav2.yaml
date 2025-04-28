@@ -67,22 +67,14 @@ bt_navigator:
     # - nav2_drive_on_heading_cancel_bt_node
 
 # maybe unnecessary?
-bt_navigator_navigate_through_poses_rclcpp_node:
-  ros__parameters:
-    use_sim_time: true
-
-bt_navigator_navigate_to_pose_rclcpp_node:
-  ros__parameters:
-    use_sim_time: true
-
 controller_server:
   ros__parameters:
     use_sim_time: true
     controller_frequency: 20.0
-    min_x_velocity_threshold: 0.05
-    min_y_velocity_threshold: 0.5
+    min_x_velocity_threshold: 0.02
+    min_y_velocity_threshold: 0.0
     min_theta_velocity_threshold: 0.05
-    failure_tolerance: 0.3
+    failure_tolerance: 0.5
     odom_topic: "diff_drive_controller/odom"
     progress_checker_plugins: ["progress_checker"]
     goal_checker_plugins: ["goal_checker"] # "precise_goal_checker"
@@ -154,42 +146,39 @@ local_costmap:
     ros__parameters:
       update_frequency: 5.0
       publish_frequency: 2.0
-      global_frame: odom
+      global_frame: map
       robot_base_frame: base_footprint
       use_sim_time: True
       rolling_window: true
       width: 3
       height: 3
-      resolution: 0.06
-      robot_radius: 0.175
-      plugins: ["static_layer", "voxel_layer", "inflation_layer"]
-      inflation_layer:
-        plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.45
-      voxel_layer:
-        plugin: "nav2_costmap_2d::VoxelLayer"
-        enabled: True
-        publish_voxel_map: True
-        origin_z: 0.0
-        z_resolution: 0.05
-        z_voxels: 16
-        max_obstacle_height: 2.0
-        mark_threshold: 0
-        observation_sources: scan
-        scan:
-          topic: scan
-          max_obstacle_height: 2.0
-          clearing: True
-          marking: True
-          data_type: "LaserScan"
-          raytrace_max_range: 3.0
-          raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
-          obstacle_min_range: 0.0
+      resolution: 0.05
+      robot_radius: 0.2
+      plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.3
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: True
+        observation_sources: scan  
+        combination_method: 1      
+        footprint_clearing_enabled: True 
+        scan:                     
+          topic: scan             
+          max_obstacle_height: 2.0 
+          clearing: True          
+          marking: True          
+          data_type: "LaserScan" 
+          raytrace_max_range: 3.0 
+          raytrace_min_range: 0.0 
+          obstacle_max_range: 2.5 
+          obstacle_min_range: 0.0 
+          obstacle_min_range: 0.0
       always_send_full_costmap: True
 
 global_costmap:
@@ -223,19 +212,19 @@ global_costmap:
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        cost_scaling_factor: 4.0
-        inflation_radius: 0.45
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.3
       always_send_full_costmap: True
 
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 20.0
+    expected_planner_frequency: 1.0
     use_sim_time: True
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner::NavfnPlanner"
       tolerance: 0.5
-      use_astar: false
+      use_astar: true
       allow_unknown: true
 
 smoother_server:
@@ -279,11 +268,12 @@ waypoint_follower:
     use_sim_time: True
     loop_rate: 20
     stop_on_failure: false
-    waypoint_task_executor_plugin: "wait_at_waypoint"
-    wait_at_waypoint:
-      plugin: "nav2_waypoint_follower::WaitAtWaypoint"
+    waypoint_task_executor_plugin: "uv_at_waypoint"
+
+    uv_at_waypoint:
+      plugin: "uv_waypoint_executor::UVLampExecutor"
       enabled: True
-      waypoint_pause_duration: 200
+      uv_lamp_on_duration: 5.0
 
 velocity_smoother:
   ros__parameters:
