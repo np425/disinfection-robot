@@ -15,8 +15,8 @@ class SurfaceFilter(Node):
     def __init__(self):
         super().__init__('surface_filter')
 
-        self.declare_parameter('angle_min', -np.pi)
-        self.declare_parameter('angle_max', np.pi)
+        self.declare_parameter('angle_min', -np.pi/4)
+        self.declare_parameter('angle_max', np.pi/4)
         self.declare_parameter('distance_max', 2.0) 
         self.declare_parameter('tolerance_map_hit', 0.1)
         self.declare_parameter('frame_scan_transform', 'uv_lamp_link') 

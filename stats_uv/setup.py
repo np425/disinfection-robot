@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'statistics_uv'
+package_name = 'stats_uv'
 
 setup(
     name=package_name,
@@ -20,8 +20,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'stats_dose = statistics_uv.stats_dose:main',
-            'stats_time = statistics_uv.stats_time:main',
+            'uv_dose_tracker = stats_uv.stats_dose:main',
+            'uv_time_tracker = stats_uv.stats_time:main',
+            'uv_pos_tracker = stats_uv.stats_pos:main',
         ],
     },
 )

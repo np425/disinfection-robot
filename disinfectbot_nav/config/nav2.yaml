@@ -273,7 +273,7 @@ waypoint_follower:
     uv_at_waypoint:
       plugin: "uv_waypoint_executor::UVLampExecutor"
       enabled: True
-      uv_lamp_on_duration: 5.0
+      uv_lamp_on_duration: 30.0
 
 velocity_smoother:
   ros__parameters:

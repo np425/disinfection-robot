@@ -4,14 +4,14 @@ import math
 from tf2_ros import TransformListener, Buffer
 from std_srvs.srv import Empty, Trigger
 
-class DistanceStatsNode(Node):
+class DistanceTracker(Node):
     def __init__(self):
-        super().__init__('stats_distance')
-        self.declare_parameter('move_threshold', 0.02)
+        super().__init__('distance_tracker')
+        self.declare_parameter('move_threshold', 0.005)
         self.move_threshold = self.get_parameter('move_threshold').value
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-        self.timer = self.create_timer(1, self.timer_callback)
+        self.timer = self.create_timer(0.1, self.timer_callback)
         self.last_pose = None
         self.total_distance = 0.0
         self.reset_srv = self.create_service(Empty, '/reset_distance', self.reset_callback)
@@ -40,8 +40,8 @@ class DistanceStatsNode(Node):
                         self.is_moving = False
 
             self.last_pose = (x, y)
-        except Exception:
-            pass
+        except Exception as e:
+            self.get_logger().warn(f"TF lookup failed: {e}", throttle_duration_sec=10.0)
 
     def reset_callback(self, request, response):
         self.total_distance = 0.0
@@ -57,7 +57,7 @@ class DistanceStatsNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = DistanceStatsNode()
+    node = DistanceTracker()
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()

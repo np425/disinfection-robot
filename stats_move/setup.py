@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'statistics_move'
+package_name = 'stats_move'
 
 setup(
     name=package_name,
@@ -19,10 +19,9 @@ setup(
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [            
-            'stats_distance = statistics_move.stats_distance:main',
-            'stats_time = statistics_move.stats_time:main',
-            'stats_waypoints = statistics_move.stats_waypoints:main',
+        'console_scripts': [
+            'distance_tracker = stats_move.stats_distance:main',
+            'movement_time_tracker = stats_move.stats_time:main',
         ],
     },
 )
